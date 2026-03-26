@@ -26,7 +26,7 @@ services:
     # --useclblast 0 0
     command:
       [
-        "--model", "/models/MyModel.gguf", # Specify the path to your model within the container
+         # Specify the path to your model within the container
         "--port", "5001",
         "--usevulkan", # Upstream KoboldCpp docs recommend Vulkan for AMD on mainline builds
         "--gpulayers", "60", # Offload all possible layers to the GPU
