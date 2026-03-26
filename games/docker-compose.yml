@@ -1,0 +1,38 @@
+services:  # --- Game Streaming Server (For Moonlight) ---
+  sunshine:
+    image: lizardbyte/sunshine:latest-ubuntu-22.04
+    container_name: sunshine
+    restart: unless-stopped
+    network_mode: host # Required for Moonlight to discover the server on your network
+    privileged: true # Required for capturing inputs and display
+    volumes:
+      - ./sunshine/config:/config
+      # The following mappings allow Sunshine to emulate controllers
+      - /dev/input:/dev/input
+      - /dev/uinput:/dev/uinput
+    devices:
+      # Sunshine's Docker docs require exposing /dev/dri for AMD/VA-API encode access.
+      - /dev/dri:/dev/dri
+
+  # --- Browser-based Retro Emulator ---
+  emulatorjs:
+    image: linuxserver/emulatorjs:latest
+    container_name: emulatorjs
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - SUBFOLDER=/
+    volumes:
+      - ./emulatorjs/config:/config
+      - ./emulatorjs/data:/data
+      # Optional read-only direct ROM mounts (example):
+      # - ./roms/psx:/roms/psx:ro
+      # - ./roms/n64:/roms/n64:ro
+      # - ./roms/snes:/roms/snes:ro
+      # - ./roms/gba:/roms/gba:ro
+    ports:
+      - "3080:80" # Emulator frontend
+      - "3300:3000" # EmulatorJS backend/admin UI
+      # - "4001:4001" # Optional IPFS peering

@@ -1,0 +1,57 @@
+services:
+  # --- AI Text Generation (KoboldCpp on AMD) ---
+  koboldcpp:
+    container_name: koboldcpp
+    restart: always
+    build:
+      context: .
+      dockerfile: ./docker/koboldcpp/Dockerfile
+      args:
+        # Defaults to the latest known release tag; override in .env as needed.
+        KOBOLDCPP_RELEASE: ${KOBOLDCPP_RELEASE:-v1.110}
+    image: koboldcpp-local:latest
+    ports:
+      - '5001:5001' # Exposes the KoboldCpp web UI port (default is 5001)
+    volumes:
+      # Mount your local models directory to the container's /models directory
+      - './models:/models'
+    # AMD/ROCm container access follows AMD's container docs: expose /dev/kfd and /dev/dri.
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    security_opt:
+      - seccomp=unconfined
+    # Command-line arguments for KoboldCpp.
+    # If this image/build lacks Vulkan support for your card, upstream's AMD fallback is:
+    # --useclblast 0 0
+    command:
+      [
+        "--model", "/models/MyModel.gguf", # Specify the path to your model within the container
+        "--port", "5001",
+        "--usevulkan", # Upstream KoboldCpp docs recommend Vulkan for AMD on mainline builds
+        "--gpulayers", "60", # Offload all possible layers to the GPU
+        "--threads", "4" # Adjust based on your CPU
+      ]
+
+  # --- AI Image Generation ---
+  sdnext:
+    build:
+      # SD.Next has no GitHub Releases page; use the latest tagged source ref.
+      context: https://github.com/vladmandic/sdnext.git#${SDNEXT_REF:-2026-01-22}
+      dockerfile: configs/Dockerfile.rocm
+    image: sdnext-rocm-local:latest
+    container_name: sdnext
+    restart: unless-stopped
+    ports:
+      - "7860:7860"
+    security_opt:
+      - seccomp=unconfined
+    devices:
+      - /dev/dri
+      - /dev/kfd
+    volumes:
+      - ./sdnext/app:/app
+      - ./sdnext/python:/mnt/python
+      - ./sdnext/data:/mnt/data
+      - ./models/stable-diffusion:/mnt/models/Stable-diffusion
+      - ./sdnext/huggingface:/root/.cache/huggingface
